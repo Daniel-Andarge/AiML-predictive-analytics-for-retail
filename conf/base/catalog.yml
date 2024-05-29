@@ -1,0 +1,10 @@
+pharma:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/train.csv
+
+
+another_dataset:
+  type: pandas.ExcelDataset
+  filepath: data/another_dataset.xlsx
+    load_args:
+    engine: openpyxl
