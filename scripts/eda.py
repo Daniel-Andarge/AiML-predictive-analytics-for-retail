@@ -1,9 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from scipy.stats import ttest_ind, f_oneway
 from statsmodels.tsa.seasonal import seasonal_decompose
-
+from scipy.stats import pearsonr, f_oneway
 
 def compute_descriptive_statistics(df):
     """
@@ -243,3 +243,96 @@ def analyze_sales_customers_correlation(data_path):
         print("The negative correlation between sales and the number of customers suggests that the sales forecasting model should consider the customer count as a feature, but with an inverse relationship. This could help the model better capture the dynamics between sales and customer count.")
     else:
         print("The lack of correlation between sales and the number of customers suggests that the customer count may not be a useful feature for the sales forecasting model. The model should focus on other factors that are more strongly related to sales.")
+
+
+
+
+
+def analyze_promo_impact(data_path):
+    """
+    Analyze the impact of promotions on sales and customers.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Group the data by Promo and calculate summary statistics
+    promo_stats = df.groupby('Promo')[['Sales', 'Customers']].agg(['mean', 'std', 'count'])
+    print("Summary statistics by Promo:")
+    print(promo_stats)
+
+    # Perform statistical tests
+    # t-test to compare sales between promo and non-promo groups
+    t_stat, p_value = ttest_ind(df[df['Promo'] == 1]['Sales'], df[df['Promo'] == 0]['Sales'])
+    print(f"\nT-test for Sales: t-statistic={t_stat:.2f}, p-value={p_value:.4f}")
+
+    # ANOVA to compare sales and customers between promo groups
+    sales_anova = f_oneway(df[df['Promo'] == 1]['Sales'], df[df['Promo'] == 0]['Sales'])
+    customers_anova = f_oneway(df[df['Promo'] == 1]['Customers'], df[df['Promo'] == 0]['Customers'])
+    print(f"ANOVA for Sales: F-statistic={sales_anova.statistic:.2f}, p-value={sales_anova.pvalue:.4f}")
+    print(f"ANOVA for Customers: F-statistic={customers_anova.statistic:.2f}, p-value={customers_anova.pvalue:.4f}")
+
+    # Analyze the impact on new and existing customers
+    new_customers = df[df['Promo'] == 1]['Customers'] - df[df['Promo'] == 0]['Customers']
+    existing_customers = df[df['Promo'] == 0]['Customers']
+    print("\nImpact on new and existing customers:")
+    print(f"Average increase in new customers during promotions: {new_customers.mean():.2f}")
+    print(f"Average number of existing customers without promotions: {existing_customers.mean():.2f}")
+
+
+
+
+def optimize_promo_deployment(data_path):
+    """
+    Investigate the relationship between Promo, Sales, and other relevant features
+    to identify more effective ways of deploying promotions.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Investigate the relationship between Promo, Sales, and other features
+    corr_matrix = df.corr()
+    print("Correlation matrix:")
+    print(corr_matrix)
+
+    # Determine if certain store types, assortment levels, or competitive environments
+    # are more responsive to promotions
+    print("\nANOVA tests for promo effectiveness:")
+
+    # ANOVA for StoreType
+    store_type_anova = f_oneway(*[df[df['StoreType'] == t]['Sales'] for t in df['StoreType'].unique()])
+    print(f"StoreType: F-statistic={store_type_anova.statistic:.2f}, p-value={store_type_anova.pvalue:.4f}")
+
+    # ANOVA for Assortment
+    assortment_anova = f_oneway(*[df[df['Assortment'] == a]['Sales'] for a in df['Assortment'].unique()])
+    print(f"Assortment: F-statistic={assortment_anova.statistic:.2f}, p-value={assortment_anova.pvalue:.4f}")
+
+    # ANOVA for CompetitionDistance
+    competition_anova = f_oneway(*[df[df['CompetitionDistance'] < 1000]['Sales'],
+                                  df[(df['CompetitionDistance'] >= 1000) & (df['CompetitionDistance'] < 5000)]['Sales'],
+                                  df[df['CompetitionDistance'] >= 5000]['Sales']])
+    print(f"CompetitionDistance: F-statistic={competition_anova.statistic:.2f}, p-value={competition_anova.pvalue:.4f}")
+
+    # Suggest strategies for deploying promotions more effectively
+    print("\nStrategies for deploying promotions more effectively:")
+    if store_type_anova.pvalue < 0.05:
+        print("- Target specific store types that are more responsive to promotions")
+    if assortment_anova.pvalue < 0.05:
+        print("- Tailor promotions to the assortment level of the store")
+    if competition_anova.pvalue < 0.05:
+        print("- Focus promotions on stores with higher competition distance")
+    print("- Conduct further analysis on the interaction between store features and promo effectiveness")
+
+
+
