@@ -95,25 +95,21 @@ def compare_promo_distribution(train_df, test_df):
 
 
 
-def analyze_sales_around_holidays(data_path):
+def analyze_sales_around_holidays(df):
     """
     Analyze the sales behavior before, during, and after holidays.
 
     Args:
-        data_path (str): Path to the dataset.
+        df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
-
-    # Group the data by StateHoliday and calculate summary statistics
+  
     holiday_stats = df.groupby('StateHoliday')['Sales'].agg(['mean', 'median', 'std'])
     print("Sales statistics by holiday type:")
     print(holiday_stats)
 
-    # Visualize the sales behavior around holidays
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
     # Line plot of sales over time, colored by holiday type
@@ -148,35 +144,32 @@ def analyze_sales_around_holidays(data_path):
 
 
 
-def analyze_seasonal_purchase_behavior(data_path):
+def analyze_seasonal_purchase_behavior(df):
     """
     Analyze seasonal purchase behaviors in the data.
 
     Args:
-        data_path (str): Path to the dataset.
+         df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
-
-    # Convert the 'Date' column to datetime
-    df['Date'] = pd.to_datetime(df['Date'])
 
     # Investigate seasonal patterns in sales
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
     # Seasonal decomposition of sales
     result = seasonal_decompose(df['Sales'], model='additive', period=365)
-    result.plot(ax=ax1)
-    ax1.set_title('Seasonal Decomposition of Sales')
+    plt.subplot(2, 1, 1)
+    result.plot()
+    plt.title('Seasonal Decomposition of Sales')
 
     # Seasonal plot of sales
-    sns.lineplot(x='Date', y='Sales', data=df, ax=ax2)
-    ax2.set_title('Seasonal Plot of Sales')
-    ax2.set_xlabel('Date')
-    ax2.set_ylabel('Sales')
+    plt.subplot(2, 1, 2)
+    sns.lineplot(x='Date', y='Sales', data=df)
+    plt.title('Seasonal Plot of Sales')
+    plt.xlabel('Date')
+    plt.ylabel('Sales')
 
     plt.show()
 
@@ -206,19 +199,16 @@ def analyze_seasonal_purchase_behavior(data_path):
         print("No clear seasonal patterns in sales.")
 
 
-
-def analyze_sales_customers_correlation(data_path):
+def analyze_sales_customers_correlation(df):
     """
     Analyze the correlation between sales and the number of customers.
 
     Args:
-        data_path (str): Path to the dataset.
+        df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
 
     # Calculate the correlation coefficient
     correlation = df['Sales'].corr(df['Customers'])
@@ -251,7 +241,7 @@ def analyze_sales_customers_correlation(data_path):
 
 
 
-def analyze_promo_impact(data_path):
+def analyze_promo_impact(df):
     """
     Analyze the impact of promotions on sales and customers.
 
@@ -261,9 +251,6 @@ def analyze_promo_impact(data_path):
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
-
     # Group the data by Promo and calculate summary statistics
     promo_stats = df.groupby('Promo')[['Sales', 'Customers']].agg(['mean', 'std', 'count'])
     print("Summary statistics by Promo:")
@@ -290,20 +277,17 @@ def analyze_promo_impact(data_path):
 
 
 
-def optimize_promo_deployment(data_path):
+def optimize_promo_deployment(df):
     """
     Investigate the relationship between Promo, Sales, and other relevant features
     to identify more effective ways of deploying promotions.
 
     Args:
-        data_path (str): Path to the dataset.
+        df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
-
     # Investigate the relationship between Promo, Sales, and other features
     corr_matrix = df.corr()
     print("Correlation matrix:")
@@ -340,19 +324,16 @@ def optimize_promo_deployment(data_path):
 
 
 
-def analyze_store_hours(data_path):
+def analyze_store_hours(df):
     """
     Analyze the trends in customer behavior and sales during store opening and closing times.
 
     Args:
-        data_path (str): Path to the dataset.
+         df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
-
     # Analyze the impact of store opening and closing on customer behavior and sales
     print("Impact of store opening and closing on customer behavior and sales:")
 
@@ -400,18 +381,18 @@ def analyze_store_hours(data_path):
         print("- The dataset does not contain a 'DayOfWeek' column, so trends over the week could not be analyzed.")
 
 
-def analyze_weekday_openings(data_path):
+
+
+def analyze_weekday_openings(df):
     """
     Identify the stores that are open on all weekdays and analyze the impact on their weekend sales.
 
     Args:
-        data_path (str): Path to the dataset.
+         df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
 
     # Group the data by store and count the number of days each store was open
     store_open_counts = df.groupby('Store')['Open'].sum()
@@ -441,18 +422,16 @@ def analyze_weekday_openings(data_path):
 
 
 
-def analyze_assortment_sales(data_path):
+def analyze_assortment_sales(df):
     """
     Analyze the relationship between assortment type and sales.
 
     Args:
-        data_path (str): Path to the dataset.
+        df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
 
     # Group the data by assortment type and calculate summary statistics
     assortment_sales = df.groupby('Assortment')['Sales'].agg(['mean', 'median', 'std', 'min', 'max'])
@@ -487,18 +466,16 @@ def analyze_assortment_sales(data_path):
 
 
 
-def analyze_competition_distance(data_path):
+def analyze_competition_distance(df):
     """
     Analyze the relationship between competition distance and sales.
 
     Args:
-        data_path (str): Path to the dataset.
+         df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
 
     # Analyze the overall relationship between competition distance and sales
     plt.figure(figsize=(8, 6))
@@ -555,18 +532,16 @@ def analyze_competition_distance(data_path):
 
 
 
-def analyze_competition_distance(data_path):
+def analyze_competition_distance(df):
     """
     Analyze the relationship between competition distance and sales.
 
     Args:
-        data_path (str): Path to the dataset.
+         df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
 
     # Analyze the overall relationship between competition distance and sales
     plt.figure(figsize=(8, 6))
@@ -623,18 +598,16 @@ def analyze_competition_distance(data_path):
 
 
 
-def analyze_new_competitors(data_path):
+def analyze_new_competitors(df):
     """
     Analyze the impact of new competitors on store sales.
 
     Args:
-        data_path (str): Path to the dataset.
+         df (str): Dataframe.
 
     Returns:
         None
     """
-    # Load the dataset
-    df = pd.read_csv(data_path)
 
     # Identify stores with changes in competition distance from "NA" to a numeric value
     store_changes = df[df['CompetitionDistance'].isin(['NA'])].copy()
