@@ -551,3 +551,123 @@ def analyze_competition_distance(data_path):
         print(f"\nAssortment '{assortment}':")
         print(f"Pearson correlation coefficient: {corr:.2f}")
         print(f"p-value: {p_value:.4f}")
+
+
+
+
+def analyze_competition_distance(data_path):
+    """
+    Analyze the relationship between competition distance and sales.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Analyze the overall relationship between competition distance and sales
+    plt.figure(figsize=(8, 6))
+    plt.scatter(df['CompetitionDistance'], df['Sales'])
+    plt.xlabel('Competition Distance')
+    plt.ylabel('Sales')
+    plt.title('Competition Distance vs. Sales')
+    plt.show()
+
+    corr, p_value = stats.pearsonr(df['CompetitionDistance'], df['Sales'])
+    print(f"Pearson correlation coefficient: {corr:.2f}")
+    print(f"p-value: {p_value:.4f}")
+
+    # Fit a linear regression model
+    model = LinearRegression()
+    X = df['CompetitionDistance'].values.reshape(-1, 1)
+    y = df['Sales'].values
+    model.fit(X, y)
+    print(f"Regression coefficient: {model.coef_[0]:.2f}")
+    print(f"Intercept: {model.intercept_:.2f}")
+
+    # Analyze the relationship by store location (city center vs. suburban)
+    city_center = df[df['StoreType'] == 'c']
+    suburban = df[df['StoreType'] != 'c']
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(city_center['CompetitionDistance'], city_center['Sales'], label='City Center')
+    plt.scatter(suburban['CompetitionDistance'], suburban['Sales'], label='Suburban')
+    plt.xlabel('Competition Distance')
+    plt.ylabel('Sales')
+    plt.title('Competition Distance vs. Sales by Store Location')
+    plt.legend()
+    plt.show()
+
+    city_center_corr, city_center_p = stats.pearsonr(city_center['CompetitionDistance'], city_center['Sales'])
+    suburban_corr, suburban_p = stats.pearsonr(suburban['CompetitionDistance'], suburban['Sales'])
+
+    print("City Center Stores:")
+    print(f"Pearson correlation coefficient: {city_center_corr:.2f}")
+    print(f"p-value: {city_center_p:.4f}")
+
+    print("\nSuburban Stores:")
+    print(f"Pearson correlation coefficient: {suburban_corr:.2f}")
+    print(f"p-value: {suburban_p:.4f}")
+
+    # Analyze the relationship by assortment type
+    for assortment in df['Assortment'].unique():
+        assortment_df = df[df['Assortment'] == assortment]
+        corr, p_value = stats.pearsonr(assortment_df['CompetitionDistance'], assortment_df['Sales'])
+        print(f"\nAssortment '{assortment}':")
+        print(f"Pearson correlation coefficient: {corr:.2f}")
+        print(f"p-value: {p_value:.4f}")
+
+
+
+
+def analyze_new_competitors(data_path):
+    """
+    Analyze the impact of new competitors on store sales.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Identify stores with changes in competition distance from "NA" to a numeric value
+    store_changes = df[df['CompetitionDistance'].isin(['NA'])].copy()
+    store_changes['CompetitionDistance'] = store_changes['CompetitionDistance'].ffill()
+    store_changes = store_changes[store_changes['CompetitionDistance'] != 'NA']
+
+    # Analyze sales trends for affected stores
+    for store_id in store_changes['Store'].unique():
+        store_data = store_changes[store_changes['Store'] == store_id]
+        store_data = store_data.sort_values('Date')
+
+        # Find the date of the competition distance change
+        change_date = store_data['Date'].iloc[0]
+
+        # Split the data into before and after the change
+        before_change = store_data[store_data['Date'] < change_date]
+        after_change = store_data[store_data['Date'] >= change_date]
+
+        # Plot the sales trend
+        plt.figure(figsize=(8, 6))
+        plt.plot(before_change['Date'], before_change['Sales'], label='Before Change')
+        plt.plot(after_change['Date'], after_change['Sales'], label='After Change')
+        plt.xlabel('Date')
+        plt.ylabel('Sales')
+        plt.title(f"Sales Trend for Store {store_id}")
+        plt.legend()
+        plt.show()
+
+        # Calculate the mean sales before and after the change
+        before_mean = before_change['Sales'].mean()
+        after_mean = after_change['Sales'].mean()
+        print(f"Store {store_id}:")
+        print(f"Mean sales before change: {before_mean:.2f}")
+        print(f"Mean sales after change: {after_mean:.2f}")
+        print(f"Percent change: {(after_mean - before_mean) / before_mean * 100:.2f}%")
+        print()
