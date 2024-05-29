@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 
 def compute_descriptive_statistics(df):
@@ -89,6 +90,8 @@ def compare_promo_distribution(train_df, test_df):
 
 
 
+
+
 def analyze_sales_around_holidays(data_path):
     """
     Analyze the sales behavior before, during, and after holidays.
@@ -138,3 +141,105 @@ def analyze_sales_around_holidays(data_path):
         print("Sales appear to recover after state holidays.")
     else:
         print("No clear pattern in sales after state holidays.")
+
+
+
+
+def analyze_seasonal_purchase_behavior(data_path):
+    """
+    Analyze seasonal purchase behaviors in the data.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Convert the 'Date' column to datetime
+    df['Date'] = pd.to_datetime(df['Date'])
+
+    # Investigate seasonal patterns in sales
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+
+    # Seasonal decomposition of sales
+    result = seasonal_decompose(df['Sales'], model='additive', period=365)
+    result.plot(ax=ax1)
+    ax1.set_title('Seasonal Decomposition of Sales')
+
+    # Seasonal plot of sales
+    sns.lineplot(x='Date', y='Sales', data=df, ax=ax2)
+    ax2.set_title('Seasonal Plot of Sales')
+    ax2.set_xlabel('Date')
+    ax2.set_ylabel('Sales')
+
+    plt.show()
+
+    # Explore the impact of Promo2 on seasonal sales patterns
+    df['Month'] = df['Date'].dt.month
+    df['Year'] = df['Date'].dt.year
+
+    # Calculate average sales by month and Promo2 status
+    promo2_sales = df.groupby(['Month', 'Promo2'])['Sales'].mean().unstack()
+
+    # Plot the impact of Promo2 on seasonal sales
+    promo2_sales.plot(title='Impact of Promo2 on Seasonal Sales Patterns')
+    plt.xlabel('Month')
+    plt.ylabel('Sales')
+    plt.show()
+
+    # Check for observations
+    print("Observations:")
+    if promo2_sales['0'].max() > promo2_sales['1'].max():
+        print("Sales appear to be higher during periods without Promo2.")
+    else:
+        print("Sales appear to be higher during periods with Promo2.")
+
+    if result.seasonal.max() > result.seasonal.min():
+        print("There are clear seasonal patterns in sales.")
+    else:
+        print("No clear seasonal patterns in sales.")
+
+
+
+def analyze_sales_customers_correlation(data_path):
+    """
+    Analyze the correlation between sales and the number of customers.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Calculate the correlation coefficient
+    correlation = df['Sales'].corr(df['Customers'])
+    print(f"Correlation coefficient between Sales and Customers: {correlation:.2f}")
+
+    # Visualize the relationship
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.scatterplot(x='Customers', y='Sales', data=df, ax=ax)
+    ax.set_title('Relationship between Sales and Customers')
+    ax.set_xlabel('Customers')
+    ax.set_ylabel('Sales')
+
+    # Add a regression line
+    slope, intercept = np.polyfit(df['Customers'], df['Sales'], 1)
+    ax.plot(df['Customers'], slope * df['Customers'] + intercept, color='r', label=f'Regression line (slope={slope:.2f})')
+    ax.legend()
+
+    plt.show()
+
+    # Discuss the implications for the sales forecasting model
+    print("Implications for the sales forecasting model:")
+    if correlation > 0:
+        print("The positive correlation between sales and the number of customers suggests that the sales forecasting model should incorporate the customer count as a feature. This could improve the model's ability to predict sales accurately.")
+    elif correlation < 0:
+        print("The negative correlation between sales and the number of customers suggests that the sales forecasting model should consider the customer count as a feature, but with an inverse relationship. This could help the model better capture the dynamics between sales and customer count.")
+    else:
+        print("The lack of correlation between sales and the number of customers suggests that the customer count may not be a useful feature for the sales forecasting model. The model should focus on other factors that are more strongly related to sales.")
