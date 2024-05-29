@@ -336,3 +336,102 @@ def optimize_promo_deployment(data_path):
 
 
 
+
+def analyze_store_hours(data_path):
+    """
+    Analyze the trends in customer behavior and sales during store opening and closing times.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Analyze the impact of store opening and closing on customer behavior and sales
+    print("Impact of store opening and closing on customer behavior and sales:")
+
+    # Calculate the mean and standard deviation of Customers and Sales for open and closed stores
+    open_stats = df[df['Open'] == 1][['Customers', 'Sales']].agg(['mean', 'std'])
+    closed_stats = df[df['Open'] == 0][['Customers', 'Sales']].agg(['mean', 'std'])
+
+    print("Open stores:")
+    print(open_stats)
+    print("\nClosed stores:")
+    print(closed_stats)
+
+    # Visualize the trends in Customers and Sales over the course of a typical day or week
+    print("\nVisualizing trends in Customers and Sales over time:")
+
+    # Assume the data has a 'DayOfWeek' column
+    df['DayOfWeek'] = df['DayOfWeek'].astype(str)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+
+    # Plot the trend in Customers
+    sns.lineplot(x='DayOfWeek', y='Customers', data=df, ax=ax1)
+    ax1.set_title('Trend in Customers over the week')
+    ax1.set_xlabel('Day of the Week')
+    ax1.set_ylabel('Customers')
+
+    # Plot the trend in Sales
+    sns.lineplot(x='DayOfWeek', y='Sales', data=df, ax=ax2)
+    ax2.set_title('Trend in Sales over the week')
+    ax2.set_xlabel('Day of the Week')
+    ax2.set_ylabel('Sales')
+
+    plt.tight_layout()
+    plt.show()
+
+    # Identify patterns or insights that could inform the sales forecasting model
+    print("\nInsights for sales forecasting:")
+    if open_stats['Customers']['mean'] > closed_stats['Customers']['mean']:
+        print("- Stores tend to have more customers when they are open compared to when they are closed.")
+    if open_stats['Sales']['mean'] > closed_stats['Sales']['mean']:
+        print("- Stores tend to have higher sales when they are open compared to when they are closed.")
+    if 'DayOfWeek' in df.columns:
+        print("- Customers and sales exhibit distinct trends over the course of the week, which could be useful for sales forecasting.")
+    else:
+        print("- The dataset does not contain a 'DayOfWeek' column, so trends over the week could not be analyzed.")
+
+
+def analyze_weekday_openings(data_path):
+    """
+    Identify the stores that are open on all weekdays and analyze the impact on their weekend sales.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Group the data by store and count the number of days each store was open
+    store_open_counts = df.groupby('Store')['Open'].sum()
+
+    # Identify the stores that were open on all weekdays (Monday to Friday)
+    weekday_open_stores = store_open_counts[store_open_counts == 5].index.tolist()
+    print(f"Stores open on all weekdays: {weekday_open_stores}")
+
+    # Calculate the average weekend sales for weekday-open stores and other stores
+    weekend_sales = df[df['DayOfWeek'].isin([6, 7])][['Store', 'Sales']]
+    weekday_open_sales = weekend_sales[weekend_sales['Store'].isin(weekday_open_stores)]['Sales']
+    other_sales = weekend_sales[~weekend_sales['Store'].isin(weekday_open_stores)]['Sales']
+
+    weekday_open_mean = weekday_open_sales.mean()
+    other_mean = other_sales.mean()
+
+    print(f"Average weekend sales for stores open on all weekdays: {weekday_open_mean:.2f}")
+    print(f"Average weekend sales for other stores: {other_mean:.2f}")
+
+    # Visualize the comparison
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(['Stores open on all weekdays', 'Other stores'], [weekday_open_mean, other_mean])
+    ax.set_title('Average Weekend Sales')
+    ax.set_xlabel('Store Type')
+    ax.set_ylabel('Sales')
+    plt.show()
