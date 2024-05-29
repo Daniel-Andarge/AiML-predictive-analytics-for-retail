@@ -6,15 +6,14 @@ import sys
 
 def load_dataset(path):
     try:
-        # Load the CSV file into a DataFrame
-        df = pd.read_csv(path, low_memory=False)
+        # Load the Parquet file into a DataFrame
+        df = pd.read_parquet(path, engine='pyarrow')
         return df
     except FileNotFoundError as e:
         print(f"Error: {e}. The dataset file was not found.")
     except Exception as e:
         print(f"Error: {e}. An error occurred while loading the dataset.")
     return None
-
 
 
 def save_dataset(df, output_folder, filename):
