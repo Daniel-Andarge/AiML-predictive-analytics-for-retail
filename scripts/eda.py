@@ -1,9 +1,12 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import ttest_ind, f_oneway
 from statsmodels.tsa.seasonal import seasonal_decompose
 from scipy.stats import pearsonr, f_oneway
+from sklearn.linear_model import LinearRegression
+import scipy.stats as stats
 
 def compute_descriptive_statistics(df):
     """
@@ -435,3 +438,116 @@ def analyze_weekday_openings(data_path):
     ax.set_xlabel('Store Type')
     ax.set_ylabel('Sales')
     plt.show()
+
+
+
+def analyze_assortment_sales(data_path):
+    """
+    Analyze the relationship between assortment type and sales.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Group the data by assortment type and calculate summary statistics
+    assortment_sales = df.groupby('Assortment')['Sales'].agg(['mean', 'median', 'std', 'min', 'max'])
+    print("Summary statistics of sales by assortment type:")
+    print(assortment_sales)
+
+    # Perform statistical tests to check for differences in sales
+    a_sales = df[df['Assortment'] == 'a']['Sales']
+    b_sales = df[df['Assortment'] == 'b']['Sales']
+    c_sales = df[df['Assortment'] == 'c']['Sales']
+
+    # Perform ANOVA test
+    f_statistic, p_value = stats.f_oneway(a_sales, b_sales, c_sales)
+    print(f"\nANOVA test results:")
+    print(f"F-statistic: {f_statistic:.2f}")
+    print(f"p-value: {p_value:.4f}")
+
+    # Perform post-hoc tests (Tukey's HSD) to identify specific differences
+    _, p_tukey = stats.tukey_hsd(df['Sales'], df['Assortment'])
+    print("\nTukey's HSD post-hoc test results:")
+    for i, j in p_tukey:
+        print(f"Comparison between '{i}' and '{j}': p-value = {p_tukey[(i, j)]:.4f}")
+
+    # Visualize the relationship
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.boxplot([a_sales, b_sales, c_sales], labels=['a', 'b', 'c'])
+    ax.set_title('Sales by Assortment Type')
+    ax.set_xlabel('Assortment Type')
+    ax.set_ylabel('Sales')
+    plt.show()
+
+
+
+
+def analyze_competition_distance(data_path):
+    """
+    Analyze the relationship between competition distance and sales.
+
+    Args:
+        data_path (str): Path to the dataset.
+
+    Returns:
+        None
+    """
+    # Load the dataset
+    df = pd.read_csv(data_path)
+
+    # Analyze the overall relationship between competition distance and sales
+    plt.figure(figsize=(8, 6))
+    plt.scatter(df['CompetitionDistance'], df['Sales'])
+    plt.xlabel('Competition Distance')
+    plt.ylabel('Sales')
+    plt.title('Competition Distance vs. Sales')
+    plt.show()
+
+    corr, p_value = stats.pearsonr(df['CompetitionDistance'], df['Sales'])
+    print(f"Pearson correlation coefficient: {corr:.2f}")
+    print(f"p-value: {p_value:.4f}")
+
+    # Fit a linear regression model
+    model = LinearRegression()
+    X = df['CompetitionDistance'].values.reshape(-1, 1)
+    y = df['Sales'].values
+    model.fit(X, y)
+    print(f"Regression coefficient: {model.coef_[0]:.2f}")
+    print(f"Intercept: {model.intercept_:.2f}")
+
+    # Analyze the relationship by store location (city center vs. suburban)
+    city_center = df[df['StoreType'] == 'c']
+    suburban = df[df['StoreType'] != 'c']
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(city_center['CompetitionDistance'], city_center['Sales'], label='City Center')
+    plt.scatter(suburban['CompetitionDistance'], suburban['Sales'], label='Suburban')
+    plt.xlabel('Competition Distance')
+    plt.ylabel('Sales')
+    plt.title('Competition Distance vs. Sales by Store Location')
+    plt.legend()
+    plt.show()
+
+    city_center_corr, city_center_p = stats.pearsonr(city_center['CompetitionDistance'], city_center['Sales'])
+    suburban_corr, suburban_p = stats.pearsonr(suburban['CompetitionDistance'], suburban['Sales'])
+
+    print("City Center Stores:")
+    print(f"Pearson correlation coefficient: {city_center_corr:.2f}")
+    print(f"p-value: {city_center_p:.4f}")
+
+    print("\nSuburban Stores:")
+    print(f"Pearson correlation coefficient: {suburban_corr:.2f}")
+    print(f"p-value: {suburban_p:.4f}")
+
+    # Analyze the relationship by assortment type
+    for assortment in df['Assortment'].unique():
+        assortment_df = df[df['Assortment'] == assortment]
+        corr, p_value = stats.pearsonr(assortment_df['CompetitionDistance'], assortment_df['Sales'])
+        print(f"\nAssortment '{assortment}':")
+        print(f"Pearson correlation coefficient: {corr:.2f}")
+        print(f"p-value: {p_value:.4f}")
