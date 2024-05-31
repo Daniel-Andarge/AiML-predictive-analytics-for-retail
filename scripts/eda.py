@@ -1,12 +1,19 @@
 import os
+import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
 import seaborn as sns
 from scipy.stats import ttest_ind, f_oneway
-from statsmodels.tsa.seasonal import seasonal_decompose
+
 from scipy.stats import pearsonr, f_oneway
 from sklearn.linear_model import LinearRegression
 import scipy.stats as stats
+
+import plotly.graph_objects as go
+import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 def compute_descriptive_statistics(df):
     """
@@ -95,26 +102,31 @@ def compare_promo_distribution(train_df, test_df):
 
 
 
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 def analyze_sales_around_holidays(df):
     """
     Analyze the sales behavior before, during, and after holidays.
 
     Args:
-        df (str): Dataframe.
+        df (pandas.DataFrame): The dataframe.
 
     Returns:
         None
     """
-  
+    
     holiday_stats = df.groupby('StateHoliday')['Sales'].agg(['mean', 'median', 'std'])
     print("Sales statistics by holiday type:")
     print(holiday_stats)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-
     # Line plot of sales over time, colored by holiday type
     df['Date'] = pd.to_datetime(df['Date'])
     df['Days_Since_Holiday'] = (df['Date'] - df['Date'].where(df['StateHoliday'] != '0').ffill()).dt.days
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
     sns.lineplot(x='Days_Since_Holiday', y='Sales', hue='StateHoliday', data=df, ax=ax1)
     ax1.set_title('Sales Around Holidays')
     ax1.set_xlabel('Days Since Holiday')
@@ -127,6 +139,7 @@ def analyze_sales_around_holidays(df):
     ax2.set_xlabel('Holiday Type')
     ax2.set_ylabel('Sales')
 
+    plt.tight_layout()
     plt.show()
 
     # Check for any patterns or trends in sales around holidays
@@ -143,60 +156,65 @@ def analyze_sales_around_holidays(df):
 
 
 
-
-def analyze_seasonal_purchase_behavior(df):
+def analyze_seasonal_purchases(df):
     """
-    Analyze seasonal purchase behaviors in the data.
-
+    Analyze seasonal purchase behaviors in the given dataframe.
+    
     Args:
-         df (str): Dataframe.
-
+    df (pandas.DataFrame): The input dataframe containing the 'Sales', 'Date', and 'Promo2' features.
+    
     Returns:
-        None
+    None
     """
-
-    # Investigate seasonal patterns in sales
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-
-    # Seasonal decomposition of sales
-    result = seasonal_decompose(df['Sales'], model='additive', period=365)
-    plt.subplot(2, 1, 1)
-    result.plot()
-    plt.title('Seasonal Decomposition of Sales')
-
-    # Seasonal plot of sales
-    plt.subplot(2, 1, 2)
-    sns.lineplot(x='Date', y='Sales', data=df)
-    plt.title('Seasonal Plot of Sales')
-    plt.xlabel('Date')
-    plt.ylabel('Sales')
-
+    # Convert 'Date' column to datetime
+    df['Date'] = pd.to_datetime(df['Date'])
+    
+    # Decompose the sales data to identify seasonal patterns
+    decomposition = seasonal_decompose(df['Sales'], model='additive', period=7)
+    
+    # Plot the decomposition
+    plt.figure(figsize=(12, 8))
+    decomposition.plot()
+    plt.suptitle('Seasonal Decomposition of Sales')
     plt.show()
-
-    # Explore the impact of Promo2 on seasonal sales patterns
-    df['Month'] = df['Date'].dt.month
-    df['Year'] = df['Date'].dt.year
-
-    # Calculate average sales by month and Promo2 status
-    promo2_sales = df.groupby(['Month', 'Promo2'])['Sales'].mean().unstack()
-
-    # Plot the impact of Promo2 on seasonal sales
-    promo2_sales.plot(title='Impact of Promo2 on Seasonal Sales Patterns')
-    plt.xlabel('Month')
-    plt.ylabel('Sales')
-    plt.show()
-
+    
+    # Analyze the impact of Promo2 on seasonal sales patterns
+    df['is_promo2'] = df['Promo2'].astype(bool)
+    
+    # Group the data by week and calculate the mean sales for each group
+    df['week'] = df['Date'].dt.isocalendar().week
+    promo2_sales = df.groupby(['week', 'is_promo2'])['Sales'].mean().unstack()
+    
     # Check for observations
     print("Observations:")
-    if promo2_sales['0'].max() > promo2_sales['1'].max():
-        print("Sales appear to be higher during periods without Promo2.")
+    unique_promo2 = df['is_promo2'].unique()
+    if len(unique_promo2) == 2:
+        promo2_false_max = promo2_sales[False].max()
+        promo2_true_max = promo2_sales[True].max()
+        if promo2_false_max > promo2_true_max:
+            print("Sales appear to be higher during periods without Promo2.")
+        else:
+            print("Sales appear to be higher during periods with Promo2.")
     else:
-        print("Sales appear to be higher during periods with Promo2.")
+        print("Insufficient data to determine the impact of Promo2 on seasonal sales patterns.")
 
-    if result.seasonal.max() > result.seasonal.min():
+    if decomposition.seasonal.max() > decomposition.seasonal.min():
         print("There are clear seasonal patterns in sales.")
     else:
         print("No clear seasonal patterns in sales.")
+    
+    # Plot the weekly sales with and without Promo2
+    plt.figure(figsize=(12, 8))
+    plt.plot(promo2_sales.index, promo2_sales[False], label='No Promo2')
+    plt.plot(promo2_sales.index, promo2_sales[True], label='Promo2')
+    plt.xlabel('Week')
+    plt.ylabel('Sales')
+    plt.title('Weekly Sales with and without Promo2')
+    plt.legend()
+    plt.show()
+
+
+        
 
 
 def analyze_sales_customers_correlation(df):
@@ -246,11 +264,27 @@ def analyze_promo_impact(df):
     Analyze the impact of promotions on sales and customers.
 
     Args:
-        data_path (str): Path to the dataset.
+        df (pandas.DataFrame): The input DataFrame.
 
     Returns:
         None
     """
+    # Group the data by Promo and calculate the total number of customers
+    promo_group = df.groupby('Promo')['Customers'].sum().reset_index()
+
+    # Calculate the new customers
+    new_customers = promo_group.loc[promo_group['Promo'] == 1, 'Customers'].values[0] - \
+                    promo_group.loc[promo_group['Promo'] == 0, 'Customers'].values[0]
+
+    print(f"New customers during promotions: {new_customers}")
+
+    # Calculate the existing customers
+    existing_customers = df[df['Promo'] == 0]['Customers']
+
+    print("\nImpact on new and existing customers:")
+    print(f"Average increase in new customers during promotions: {new_customers:.2f}")
+    print(f"Average number of existing customers without promotions: {existing_customers.mean():.2f}")
+
     # Group the data by Promo and calculate summary statistics
     promo_stats = df.groupby('Promo')[['Sales', 'Customers']].agg(['mean', 'std', 'count'])
     print("Summary statistics by Promo:")
@@ -266,13 +300,6 @@ def analyze_promo_impact(df):
     customers_anova = f_oneway(df[df['Promo'] == 1]['Customers'], df[df['Promo'] == 0]['Customers'])
     print(f"ANOVA for Sales: F-statistic={sales_anova.statistic:.2f}, p-value={sales_anova.pvalue:.4f}")
     print(f"ANOVA for Customers: F-statistic={customers_anova.statistic:.2f}, p-value={customers_anova.pvalue:.4f}")
-
-    # Analyze the impact on new and existing customers
-    new_customers = df[df['Promo'] == 1]['Customers'] - df[df['Promo'] == 0]['Customers']
-    existing_customers = df[df['Promo'] == 0]['Customers']
-    print("\nImpact on new and existing customers:")
-    print(f"Average increase in new customers during promotions: {new_customers.mean():.2f}")
-    print(f"Average number of existing customers without promotions: {existing_customers.mean():.2f}")
 
 
 
@@ -421,17 +448,25 @@ def analyze_weekday_openings(df):
     plt.show()
 
 
+import numpy as np
+import pandas as pd
+from scipy import stats
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+import matplotlib.pyplot as plt
 
 def analyze_assortment_sales(df):
     """
     Analyze the relationship between assortment type and sales.
 
     Args:
-        df (str): Dataframe.
+        df (pd.DataFrame): Dataframe.
 
     Returns:
         None
     """
+
+    # Check for and remove any rows with non-finite sales values
+    df = df[np.isfinite(df['Sales'])]
 
     # Group the data by assortment type and calculate summary statistics
     assortment_sales = df.groupby('Assortment')['Sales'].agg(['mean', 'median', 'std', 'min', 'max'])
@@ -439,9 +474,9 @@ def analyze_assortment_sales(df):
     print(assortment_sales)
 
     # Perform statistical tests to check for differences in sales
-    a_sales = df[df['Assortment'] == 'a']['Sales']
-    b_sales = df[df['Assortment'] == 'b']['Sales']
-    c_sales = df[df['Assortment'] == 'c']['Sales']
+    a_sales = df[df['Assortment'] == 0]['Sales']
+    b_sales = df[df['Assortment'] == 1]['Sales']
+    c_sales = df[df['Assortment'] == 2]['Sales']
 
     # Perform ANOVA test
     f_statistic, p_value = stats.f_oneway(a_sales, b_sales, c_sales)
@@ -450,10 +485,9 @@ def analyze_assortment_sales(df):
     print(f"p-value: {p_value:.4f}")
 
     # Perform post-hoc tests (Tukey's HSD) to identify specific differences
-    _, p_tukey = stats.tukey_hsd(df['Sales'], df['Assortment'])
+    tukey_result = pairwise_tukeyhsd(df['Sales'], df['Assortment'])
     print("\nTukey's HSD post-hoc test results:")
-    for i, j in p_tukey:
-        print(f"Comparison between '{i}' and '{j}': p-value = {p_tukey[(i, j)]:.4f}")
+    print(tukey_result)
 
     # Visualize the relationship
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -466,17 +500,16 @@ def analyze_assortment_sales(df):
 
 
 
-def analyze_competition_distance(df):
+def analyze_competition_distance_and_sales(df):
     """
     Analyze the relationship between competition distance and sales.
 
     Args:
-         df (str): Dataframe.
+        df (pandas.DataFrame): The input DataFrame.
 
     Returns:
         None
     """
-
     # Analyze the overall relationship between competition distance and sales
     plt.figure(figsize=(8, 6))
     plt.scatter(df['CompetitionDistance'], df['Sales'])
@@ -497,29 +530,13 @@ def analyze_competition_distance(df):
     print(f"Regression coefficient: {model.coef_[0]:.2f}")
     print(f"Intercept: {model.intercept_:.2f}")
 
-    # Analyze the relationship by store location (city center vs. suburban)
-    city_center = df[df['StoreType'] == 'c']
-    suburban = df[df['StoreType'] != 'c']
-
-    plt.figure(figsize=(8, 6))
-    plt.scatter(city_center['CompetitionDistance'], city_center['Sales'], label='City Center')
-    plt.scatter(suburban['CompetitionDistance'], suburban['Sales'], label='Suburban')
-    plt.xlabel('Competition Distance')
-    plt.ylabel('Sales')
-    plt.title('Competition Distance vs. Sales by Store Location')
-    plt.legend()
-    plt.show()
-
-    city_center_corr, city_center_p = stats.pearsonr(city_center['CompetitionDistance'], city_center['Sales'])
-    suburban_corr, suburban_p = stats.pearsonr(suburban['CompetitionDistance'], suburban['Sales'])
-
-    print("City Center Stores:")
-    print(f"Pearson correlation coefficient: {city_center_corr:.2f}")
-    print(f"p-value: {city_center_p:.4f}")
-
-    print("\nSuburban Stores:")
-    print(f"Pearson correlation coefficient: {suburban_corr:.2f}")
-    print(f"p-value: {suburban_p:.4f}")
+    # Analyze the relationship by store type
+    for store_type in df['StoreType'].unique():
+        store_type_df = df[df['StoreType'] == store_type]
+        corr, p_value = stats.pearsonr(store_type_df['CompetitionDistance'], store_type_df['Sales'])
+        print(f"\nStore Type '{store_type}':")
+        print(f"Pearson correlation coefficient: {corr:.2f}")
+        print(f"p-value: {p_value:.4f}")
 
     # Analyze the relationship by assortment type
     for assortment in df['Assortment'].unique():
@@ -528,73 +545,6 @@ def analyze_competition_distance(df):
         print(f"\nAssortment '{assortment}':")
         print(f"Pearson correlation coefficient: {corr:.2f}")
         print(f"p-value: {p_value:.4f}")
-
-
-
-
-def analyze_competition_distance(df):
-    """
-    Analyze the relationship between competition distance and sales.
-
-    Args:
-         df (str): Dataframe.
-
-    Returns:
-        None
-    """
-
-    # Analyze the overall relationship between competition distance and sales
-    plt.figure(figsize=(8, 6))
-    plt.scatter(df['CompetitionDistance'], df['Sales'])
-    plt.xlabel('Competition Distance')
-    plt.ylabel('Sales')
-    plt.title('Competition Distance vs. Sales')
-    plt.show()
-
-    corr, p_value = stats.pearsonr(df['CompetitionDistance'], df['Sales'])
-    print(f"Pearson correlation coefficient: {corr:.2f}")
-    print(f"p-value: {p_value:.4f}")
-
-    # Fit a linear regression model
-    model = LinearRegression()
-    X = df['CompetitionDistance'].values.reshape(-1, 1)
-    y = df['Sales'].values
-    model.fit(X, y)
-    print(f"Regression coefficient: {model.coef_[0]:.2f}")
-    print(f"Intercept: {model.intercept_:.2f}")
-
-    # Analyze the relationship by store location (city center vs. suburban)
-    city_center = df[df['StoreType'] == 'c']
-    suburban = df[df['StoreType'] != 'c']
-
-    plt.figure(figsize=(8, 6))
-    plt.scatter(city_center['CompetitionDistance'], city_center['Sales'], label='City Center')
-    plt.scatter(suburban['CompetitionDistance'], suburban['Sales'], label='Suburban')
-    plt.xlabel('Competition Distance')
-    plt.ylabel('Sales')
-    plt.title('Competition Distance vs. Sales by Store Location')
-    plt.legend()
-    plt.show()
-
-    city_center_corr, city_center_p = stats.pearsonr(city_center['CompetitionDistance'], city_center['Sales'])
-    suburban_corr, suburban_p = stats.pearsonr(suburban['CompetitionDistance'], suburban['Sales'])
-
-    print("City Center Stores:")
-    print(f"Pearson correlation coefficient: {city_center_corr:.2f}")
-    print(f"p-value: {city_center_p:.4f}")
-
-    print("\nSuburban Stores:")
-    print(f"Pearson correlation coefficient: {suburban_corr:.2f}")
-    print(f"p-value: {suburban_p:.4f}")
-
-    # Analyze the relationship by assortment type
-    for assortment in df['Assortment'].unique():
-        assortment_df = df[df['Assortment'] == assortment]
-        corr, p_value = stats.pearsonr(assortment_df['CompetitionDistance'], assortment_df['Sales'])
-        print(f"\nAssortment '{assortment}':")
-        print(f"Pearson correlation coefficient: {corr:.2f}")
-        print(f"p-value: {p_value:.4f}")
-
 
 
 
@@ -643,4 +593,4 @@ def analyze_new_competitors(df):
         print(f"Mean sales before change: {before_mean:.2f}")
         print(f"Mean sales after change: {after_mean:.2f}")
         print(f"Percent change: {(after_mean - before_mean) / before_mean * 100:.2f}%")
-        print()
+        
