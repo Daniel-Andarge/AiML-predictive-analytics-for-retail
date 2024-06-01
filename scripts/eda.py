@@ -102,10 +102,6 @@ def compare_promo_distribution(train_df, test_df):
 
 
 
-
-import seaborn as sns
-import matplotlib.pyplot as plt
-
 def analyze_sales_around_holidays(df):
     """
     Analyze the sales behavior before, during, and after holidays.
@@ -123,7 +119,7 @@ def analyze_sales_around_holidays(df):
 
     # Line plot of sales over time, colored by holiday type
     df['Date'] = pd.to_datetime(df['Date'])
-    df['Days_Since_Holiday'] = (df['Date'] - df['Date'].where(df['StateHoliday'] != '0').ffill()).dt.days
+    df['Days_Since_Holiday'] = (df['Date'] - df['Date'].where(df['StateHoliday'] != '0.0').ffill()).dt.days
     
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     
@@ -144,12 +140,12 @@ def analyze_sales_around_holidays(df):
 
     # Check for any patterns or trends in sales around holidays
     print("Observations:")
-    if df.loc[df['StateHoliday'] != '0', 'Sales'].mean() < df.loc[df['StateHoliday'] == '0', 'Sales'].mean():
+    if df.loc[df['StateHoliday'] != '0.0', 'Sales'].mean() < df.loc[df['StateHoliday'] == '0.0', 'Sales'].mean():
         print("Sales tend to be lower during state holidays.")
     else:
         print("Sales tend to be higher during state holidays.")
 
-    if df['Days_Since_Holiday'].max() > 0:
+    if df['Days_Since_Holiday'].max() > 0.0:
         print("Sales appear to recover after state holidays.")
     else:
         print("No clear pattern in sales after state holidays.")
@@ -167,7 +163,7 @@ def analyze_seasonal_purchases(df):
     None
     """
     # Convert 'Date' column to datetime
-    df['Date'] = pd.to_datetime(df['Date'])
+    #df['Date'] = pd.to_datetime(df['Date'])
     
     # Decompose the sales data to identify seasonal patterns
     decomposition = seasonal_decompose(df['Sales'], model='additive', period=7)
@@ -179,18 +175,18 @@ def analyze_seasonal_purchases(df):
     plt.show()
     
     # Analyze the impact of Promo2 on seasonal sales patterns
-    df['is_promo2'] = df['Promo2'].astype(bool)
+   # df['is_promo2'] = df['Promo2'].astype(bool)
     
     # Group the data by week and calculate the mean sales for each group
     df['week'] = df['Date'].dt.isocalendar().week
-    promo2_sales = df.groupby(['week', 'is_promo2'])['Sales'].mean().unstack()
+    promo2_sales = df.groupby(['week', 'Promo2'])['Sales'].mean().unstack()
     
     # Check for observations
     print("Observations:")
-    unique_promo2 = df['is_promo2'].unique()
+    unique_promo2 = df['Promo2'].unique()
     if len(unique_promo2) == 2:
-        promo2_false_max = promo2_sales[False].max()
-        promo2_true_max = promo2_sales[True].max()
+        promo2_false_max = promo2_sales[0.0].max()
+        promo2_true_max = promo2_sales[1.0].max()
         if promo2_false_max > promo2_true_max:
             print("Sales appear to be higher during periods without Promo2.")
         else:
@@ -205,8 +201,8 @@ def analyze_seasonal_purchases(df):
     
     # Plot the weekly sales with and without Promo2
     plt.figure(figsize=(12, 8))
-    plt.plot(promo2_sales.index, promo2_sales[False], label='No Promo2')
-    plt.plot(promo2_sales.index, promo2_sales[True], label='Promo2')
+    plt.plot(promo2_sales.index, promo2_sales[0.0], label='No Promo2')
+    plt.plot(promo2_sales.index, promo2_sales[1.0], label='Promo2')
     plt.xlabel('Week')
     plt.ylabel('Sales')
     plt.title('Weekly Sales with and without Promo2')
@@ -273,13 +269,13 @@ def analyze_promo_impact(df):
     promo_group = df.groupby('Promo')['Customers'].sum().reset_index()
 
     # Calculate the new customers
-    new_customers = promo_group.loc[promo_group['Promo'] == 1, 'Customers'].values[0] - \
-                    promo_group.loc[promo_group['Promo'] == 0, 'Customers'].values[0]
+    new_customers = promo_group.loc[promo_group['Promo'] == 1.0, 'Customers'].values[0] - \
+                    promo_group.loc[promo_group['Promo'] == 0.0, 'Customers'].values[0]
 
     print(f"New customers during promotions: {new_customers}")
 
     # Calculate the existing customers
-    existing_customers = df[df['Promo'] == 0]['Customers']
+    existing_customers = df[df['Promo'] == 0.0]['Customers']
 
     print("\nImpact on new and existing customers:")
     print(f"Average increase in new customers during promotions: {new_customers:.2f}")
@@ -292,12 +288,12 @@ def analyze_promo_impact(df):
 
     # Perform statistical tests
     # t-test to compare sales between promo and non-promo groups
-    t_stat, p_value = ttest_ind(df[df['Promo'] == 1]['Sales'], df[df['Promo'] == 0]['Sales'])
+    t_stat, p_value = ttest_ind(df[df['Promo'] == 1.0]['Sales'], df[df['Promo'] == 0.0]['Sales'])
     print(f"\nT-test for Sales: t-statistic={t_stat:.2f}, p-value={p_value:.4f}")
 
     # ANOVA to compare sales and customers between promo groups
-    sales_anova = f_oneway(df[df['Promo'] == 1]['Sales'], df[df['Promo'] == 0]['Sales'])
-    customers_anova = f_oneway(df[df['Promo'] == 1]['Customers'], df[df['Promo'] == 0]['Customers'])
+    sales_anova = f_oneway(df[df['Promo'] == 1.0]['Sales'], df[df['Promo'] == 0.0]['Sales'])
+    customers_anova = f_oneway(df[df['Promo'] == 1.0]['Customers'], df[df['Promo'] == 0.0]['Customers'])
     print(f"ANOVA for Sales: F-statistic={sales_anova.statistic:.2f}, p-value={sales_anova.pvalue:.4f}")
     print(f"ANOVA for Customers: F-statistic={customers_anova.statistic:.2f}, p-value={customers_anova.pvalue:.4f}")
 
