@@ -1,18 +1,15 @@
 import os
 import numpy as np
 import pandas as pd
-
 import seaborn as sns
-from scipy.stats import ttest_ind, f_oneway
-
-from scipy.stats import pearsonr, f_oneway
-from sklearn.linear_model import LinearRegression
 import scipy.stats as stats
-
 import plotly.graph_objects as go
 import plotly.express as px
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.stats import ttest_ind, f_oneway
+from scipy.stats import pearsonr, f_oneway
+from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 def compute_descriptive_statistics(df):
@@ -444,11 +441,6 @@ def analyze_weekday_openings(df):
     plt.show()
 
 
-import numpy as np
-import pandas as pd
-from scipy import stats
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
-import matplotlib.pyplot as plt
 
 def analyze_assortment_sales(df):
     """
@@ -544,49 +536,39 @@ def analyze_competition_distance_and_sales(df):
 
 
 
-def analyze_new_competitors(df):
+
+def analyze_competition_impact(df):
     """
-    Analyze the impact of new competitors on store sales.
-
-    Args:
-         df (str): Dataframe.
-
+    Analyzes the impact of changes in competition distance on store sales.
+    
+    Parameters:
+    df (pandas.DataFrame): The input DataFrame containing the sales and competition data.
+    
     Returns:
-        None
+    None
     """
-
-    # Identify stores with changes in competition distance from "NA" to a numeric value
+    # Identify stores with a change in CompetitionDistance from "NA" to a numeric value
     store_changes = df[df['CompetitionDistance'].isin(['NA'])].copy()
-    store_changes['CompetitionDistance'] = store_changes['CompetitionDistance'].ffill()
-    store_changes = store_changes[store_changes['CompetitionDistance'] != 'NA']
-
-    # Analyze sales trends for affected stores
-    for store_id in store_changes['Store'].unique():
-        store_data = store_changes[store_changes['Store'] == store_id]
-        store_data = store_data.sort_values('Date')
-
-        # Find the date of the competition distance change
-        change_date = store_data['Date'].iloc[0]
-
-        # Split the data into before and after the change
-        before_change = store_data[store_data['Date'] < change_date]
-        after_change = store_data[store_data['Date'] >= change_date]
-
-        # Plot the sales trend
-        plt.figure(figsize=(8, 6))
-        plt.plot(before_change['Date'], before_change['Sales'], label='Before Change')
-        plt.plot(after_change['Date'], after_change['Sales'], label='After Change')
-        plt.xlabel('Date')
-        plt.ylabel('Sales')
-        plt.title(f"Sales Trend for Store {store_id}")
-        plt.legend()
-        plt.show()
-
-        # Calculate the mean sales before and after the change
-        before_mean = before_change['Sales'].mean()
-        after_mean = after_change['Sales'].mean()
-        print(f"Store {store_id}:")
-        print(f"Mean sales before change: {before_mean:.2f}")
-        print(f"Mean sales after change: {after_mean:.2f}")
-        print(f"Percent change: {(after_mean - before_mean) / before_mean * 100:.2f}%")
+    store_changes = store_changes[store_changes['CompetitionDistance'].shift(-1).notna()]
+    
+    # Analyze the sales trends for these stores before and after the change
+    for store in store_changes['Store'].unique():
+        store_data = df[df['Store'] == store]
         
+        # Find the index of the row where CompetitionDistance changes from "NA" to a numeric value
+        change_idx = store_data[store_data['CompetitionDistance'].shift(-1).notna()].index[0]
+        
+        # Split the data into before and after the change
+        before_change = store_data.loc[:change_idx-1]
+        after_change = store_data.loc[change_idx:]
+        
+        # Perform t-test to compare sales before and after the change
+        t_stat, p_value = ttest_ind(before_change['Sales'], after_change['Sales'])
+        
+        # Print the results
+        print(f"Store {store}:")
+        print(f"Change in CompetitionDistance from 'NA' to {after_change['CompetitionDistance'].iloc[0]}")
+        print(f"Sales before change: {before_change['Sales'].mean():.2f}")
+        print(f"Sales after change: {after_change['Sales'].mean():.2f}")
+        print(f"t-statistic: {t_stat:.2f}, p-value: {p_value:.4f}")
+        print("---")
