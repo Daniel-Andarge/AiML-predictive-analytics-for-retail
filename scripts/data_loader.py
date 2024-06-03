@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import sys
 
-def load_dataset(path):
+def load_data(path):
     """
     Load the dataset from a CSV or Parquet file.
 
@@ -33,7 +33,7 @@ def load_dataset(path):
     return None
 
 
-def save_dataset(df, output_folder, filename):
+def save_data(df, output_folder, filename):
     """
     Save a pandas DataFrame to a Parquet file.
 
